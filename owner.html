@@ -1,1 +1,147 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b2942"><meta name="robots" content="noindex,nofollow"><title>DPRO 居宅介護支援｜事業所ログイン</title><link rel="stylesheet" href="styles.css"></head><body><header class="hero"><div class="wrap"><div class="brand"><span class="brand-mark">D</span><span><strong>DPRO CARE PLAN</strong><small>事業所・管理者認証</small></span></div><div class="hero-copy"><p class="eyebrow">OWNER AUTHENTICATION</p><h1>事業所管理画面へ<br>安全にログイン。</h1><div class="hero-links"><a class="hero-link ghost" href="index.html">← LINE入口へ戻る</a></div></div></div></header><main class="main"><div class="wrap"><div id="status" class="status" role="alert" aria-live="polite"></div><section id="loginPanel" class="card login-box"><h2>管理者ログイン</h2><p class="hint">このSTEPでは、CAREPLAN-2で作成した認証・セッション・権限分離を実画面から確認します。</p><form id="loginForm"><div class="field"><label for="organizationCode">事業所コード</label><input class="control" id="organizationCode" maxlength="64"></div><div class="field"><label for="staffCode">職員コード</label><input class="control" id="staffCode" maxlength="64"></div><div class="field"><label for="accessCode">管理コード</label><div class="code-row"><input class="control" id="accessCode" type="password" inputmode="numeric" maxlength="128"><button id="clearCode" class="clear-btn" type="button">削除</button></div></div><div class="button-row"><button id="demoFill" class="btn secondary" type="button">デモ情報を入力</button><button id="loginButton" class="btn primary" type="submit">ログイン</button></div></form></section><section id="authPanel" class="hidden"><div class="card profile"><div><span class="badge">認証済み</span><div id="staffName" class="profile-name"></div><p id="staffRole" class="muted"></p><p id="orgName" class="muted"></p></div><button id="logout" class="btn danger" type="button">ログアウト</button></div><section class="card"><div class="section-head"><h2>API・データベース確認</h2><button id="reloadCheck" class="btn secondary" type="button">再検査</button></div><div id="healthGrid" class="health-grid"></div><p class="hint">利用者台帳、認定期限、計画進捗などの本格管理画面はCAREPLAN-5で追加します。</p></section></section></div></main><footer class="footer"><span id="version"></span></footer><script src="config.js"></script><script src="common.js"></script><script src="owner.js"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071b2c">
+  <meta name="robots" content="noindex,nofollow">
+  <title>DPRO 居宅介護支援｜管理者PC</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="owner.css">
+</head>
+<body class="owner-body">
+<header class="owner-header">
+  <div class="owner-header-inner">
+    <div class="brand"><span class="brand-mark">D</span><span><strong>DPRO CARE PLAN</strong><small>管理者PC・主任ケアマネ画面</small></span></div>
+    <div class="owner-header-links"><a href="index.html">LINE入口</a><a href="staff.html">ケアマネ画面</a></div>
+  </div>
+</header>
+
+<main>
+  <div id="status" class="status owner-status" role="alert" aria-live="polite"></div>
+
+  <section id="loginPanel" class="card login-box owner-login">
+    <span class="step">OWNER AUTHENTICATION</span>
+    <h1>事業所管理画面へログイン</h1>
+    <p class="hint">管理者・主任ケアマネだけが、全利用者、担当割当、認定期限、計画進捗、LINE連携承認を操作できます。</p>
+    <form id="loginForm">
+      <div class="field"><label for="organizationCode">事業所コード</label><input class="control" id="organizationCode" maxlength="64"></div>
+      <div class="field"><label for="staffCode">職員コード</label><input class="control" id="staffCode" maxlength="64"></div>
+      <div class="field"><label for="accessCode">管理コード</label><div class="code-row"><input class="control" id="accessCode" type="password" inputmode="numeric" maxlength="128"><button id="clearCode" class="clear-btn" type="button">削除</button></div></div>
+      <div class="button-row"><button id="demoFill" class="btn secondary" type="button">デモ情報を入力</button><button id="loginButton" class="btn primary" type="submit">ログイン</button></div>
+    </form>
+  </section>
+
+  <section id="appPanel" class="owner-shell hidden">
+    <aside class="owner-sidebar">
+      <div class="owner-profile"><span class="badge">認証済み</span><strong id="ownerName"></strong><small id="ownerMeta"></small></div>
+      <nav class="owner-nav" aria-label="管理メニュー">
+        <button class="active" data-view="dashboard" type="button"><span>01</span>ダッシュボード</button>
+        <button data-view="intakes" type="button"><span>02</span>新規相談</button>
+        <button data-view="clients" type="button"><span>03</span>利用者台帳</button>
+        <button data-view="links" type="button"><span>04</span>LINE連携承認</button>
+        <button data-view="monitoring" type="button"><span>05</span>記録確認</button>
+        <button data-view="system" type="button"><span>06</span>システム確認</button>
+      </nav>
+      <div class="sidebar-actions"><button id="refreshAll" class="btn secondary" type="button">全体を再読込</button><button id="logout" class="btn danger" type="button">ログアウト</button></div>
+    </aside>
+
+    <div class="owner-content">
+      <section id="viewDashboard" class="owner-view">
+        <div class="view-heading"><div><p class="eyebrow">TODAY & MANAGEMENT</p><h1>事業所ダッシュボード</h1><p id="organizationName" class="muted"></p></div><span id="todayLabel" class="date-chip"></span></div>
+        <div id="summaryGrid" class="owner-summary-grid"></div>
+        <div class="owner-grid two">
+          <section class="card owner-panel"><div class="section-head"><h2>ケアマネ担当状況</h2></div><div id="staffWorkload"></div></section>
+          <section class="card owner-panel"><div class="section-head"><h2>期限が近い利用者</h2></div><div id="deadlineList"></div></section>
+          <section class="card owner-panel"><div class="section-head"><h2>最近の新規相談</h2></div><div id="recentIntakeList"></div></section>
+          <section class="card owner-panel"><div class="section-head"><h2>今後の担当者会議</h2></div><div id="upcomingMeetingList"></div></section>
+        </div>
+      </section>
+
+      <section id="viewIntakes" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">INTAKE MANAGEMENT</p><h1>新規相談・紹介受付</h1></div></div>
+        <section class="card filter-card"><form id="intakeSearchForm" class="filter-row"><input id="intakeSearch" class="control" placeholder="氏名・電話番号・受付番号"><select id="intakeStatus" class="control"><option value="">すべての状態</option><option value="new">新規</option><option value="contacting">連絡中</option><option value="interview_scheduled">面談予定</option><option value="assessing">アセスメント中</option><option value="contracted">契約済み</option><option value="declined">辞退</option><option value="closed">終了</option></select><button class="btn primary" type="submit">検索</button><button id="clearIntakeSearch" class="btn secondary" type="button">解除</button></form></section>
+        <div id="intakeList" class="stack-list"></div>
+      </section>
+
+      <section id="viewClients" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">CLIENT LEDGER</p><h1>利用者台帳</h1></div><button id="newClientButton" class="btn primary" type="button">新規利用者を登録</button></div>
+        <section class="card filter-card"><form id="clientSearchForm" class="filter-row"><input id="clientSearch" class="control" placeholder="氏名・利用者番号・電話番号"><select id="clientStatus" class="control"><option value="">すべての状態</option><option value="prospective">相談中</option><option value="active">利用中</option><option value="hospitalized">入院中</option><option value="suspended">休止中</option><option value="ended">終了</option><option value="deceased">死亡</option></select><button class="btn primary" type="submit">検索</button><button id="clearClientSearch" class="btn secondary" type="button">解除</button></form></section>
+        <div id="clientList" class="client-ledger-grid"></div>
+      </section>
+
+      <section id="viewClientDetail" class="owner-view hidden">
+        <div class="view-heading detail-heading"><div><button id="backClients" class="text-button" type="button">← 利用者一覧へ</button><h1 id="detailClientName"></h1><p id="detailClientMeta" class="muted"></p></div><span id="detailCareBadge" class="care-badge"></span></div>
+        <div id="clientSafety" class="safety-box hidden"></div>
+
+        <div class="owner-grid two">
+          <section class="card owner-panel">
+            <div class="section-head"><h2>基本情報</h2><button id="editClientButton" class="btn secondary small" type="button">編集</button></div>
+            <div id="clientBasicDisplay"></div>
+            <form id="clientForm" class="subform hidden">
+              <input type="hidden" id="clientId"><input type="hidden" id="clientExpectedVersion">
+              <div class="form-grid two"><div class="field"><label for="clientCode">利用者番号</label><input class="control" id="clientCode" maxlength="64"></div><div class="field"><label for="clientFullName">氏名<span class="required">必須</span></label><input class="control" id="clientFullName" maxlength="100" required></div><div class="field"><label for="clientFullNameKana">氏名カナ</label><input class="control" id="clientFullNameKana" maxlength="100"></div><div class="field"><label for="clientBirthDate">生年月日</label><input class="control" id="clientBirthDate" type="date"></div><div class="field"><label for="clientGender">性別</label><select class="control" id="clientGender"><option value="">未設定</option><option value="male">男性</option><option value="female">女性</option><option value="other">その他</option><option value="unknown">不明</option></select></div><div class="field"><label for="clientPhone">電話番号</label><input class="control" id="clientPhone" type="tel"></div><div class="field"><label for="clientPostalCode">郵便番号</label><input class="control" id="clientPostalCode"></div><div class="field"><label for="clientContactMethod">希望連絡方法</label><select class="control" id="clientContactMethod"><option value="phone">電話</option><option value="line">LINE</option><option value="email">メール</option><option value="mail">郵送</option><option value="family">家族経由</option></select></div><div class="field"><label for="clientCareLevel">要介護度</label><select class="control" id="clientCareLevel"></select></div><div class="field"><label for="clientStatusValue">利用状態</label><select class="control" id="clientStatusValue"></select></div></div>
+              <div class="field"><label for="clientAddress">住所</label><input class="control" id="clientAddress" maxlength="300"></div>
+              <div class="form-grid two"><div class="field"><label for="clientInsurerName">保険者</label><input class="control" id="clientInsurerName"></div><div class="field"><label for="clientMedical">主治医・医療機関</label><input class="control" id="clientMedical"></div></div>
+              <div class="field"><label for="clientEmergency">緊急時注意</label><textarea class="control compact" id="clientEmergency"></textarea></div>
+              <div class="field family-field"><label for="clientFamilyNote">家族公開メモ</label><textarea class="control compact" id="clientFamilyNote"></textarea></div>
+              <div class="field internal-field"><label for="clientInternalNotes">内部メモ</label><textarea class="control compact" id="clientInternalNotes"></textarea></div>
+              <div class="button-row"><button class="btn primary" type="submit">保存</button><button id="cancelClientEdit" class="btn danger" type="button">閉じる</button></div>
+            </form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>担当ケアマネ</h2></div><div id="assignmentList"></div>
+            <form id="assignmentForm" class="subform"><div class="field"><label for="assignmentStaff">担当職員</label><select class="control" id="assignmentStaff" required></select></div><div class="form-grid two"><div class="field"><label for="assignmentRole">担当区分</label><select class="control" id="assignmentRole"><option value="primary">主担当</option><option value="secondary">副担当</option><option value="supervisor">主任確認</option></select></div><div class="field"><label for="assignmentStart">開始日</label><input class="control" id="assignmentStart" type="date"></div></div><div class="field"><label for="assignmentNote">担当メモ</label><input class="control" id="assignmentNote"></div><button class="btn primary" type="submit">担当を設定</button></form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>要介護認定</h2><button id="newCertification" class="btn secondary small" type="button">新規</button></div><div id="certificationList"></div>
+            <form id="certificationForm" class="subform hidden"><input type="hidden" id="certificationId"><input type="hidden" id="certificationExpectedUpdatedAt"><div class="form-grid two"><div class="field"><label for="certCareLevel">要介護度</label><select class="control" id="certCareLevel"></select></div><div class="field"><label for="certStatus">状態</label><select class="control" id="certStatus"><option value="current">有効</option><option value="pending">申請中</option><option value="expired">期限切れ</option><option value="withdrawn">取下げ</option></select></div><div class="field"><label for="certValidFrom">有効開始</label><input class="control" id="certValidFrom" type="date" required></div><div class="field"><label for="certValidTo">有効終了</label><input class="control" id="certValidTo" type="date" required></div><div class="field"><label for="certDate">認定日</label><input class="control" id="certDate" type="date"></div><div class="field"><label for="certInsurer">保険者</label><input class="control" id="certInsurer"></div></div><div class="field"><label for="certInternalNote">内部メモ</label><textarea class="control compact" id="certInternalNote"></textarea></div><div class="button-row"><button class="btn primary" type="submit">保存</button><button id="cancelCertification" class="btn danger" type="button">閉じる</button></div></form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>ケアプラン進捗</h2><button id="newPlan" class="btn secondary small" type="button">新規</button></div><div id="planList"></div>
+            <form id="planForm" class="subform hidden"><input type="hidden" id="planId"><input type="hidden" id="planExpectedVersion"><div class="form-grid two"><div class="field"><label for="planType">種別</label><select class="control" id="planType"><option value="initial">初回</option><option value="renewal">更新</option><option value="change">変更</option><option value="provisional">暫定</option></select></div><div class="field"><label for="planStatus">状態</label><select class="control" id="planStatus"></select></div><div class="field"><label for="planCertification">認定情報</label><select class="control" id="planCertification"><option value="">未選択</option></select></div><div class="field"><label for="planReviewDue">次回見直し</label><input class="control" id="planReviewDue" type="date"></div><div class="field"><label for="planPeriodStart">開始日</label><input class="control" id="planPeriodStart" type="date" required></div><div class="field"><label for="planPeriodEnd">終了日</label><input class="control" id="planPeriodEnd" type="date"></div></div><div class="milestone-grid"><label><span>アセスメント完了</span><input class="control" id="planAssessmentAt" type="datetime-local"></label><label><span>原案完了</span><input class="control" id="planDraftAt" type="datetime-local"></label><label><span>担当者会議完了</span><input class="control" id="planMeetingAt" type="datetime-local"></label><label><span>同意確認</span><input class="control" id="planConsentAt" type="datetime-local"></label><label><span>交付</span><input class="control" id="planDeliveredAt" type="datetime-local"></label></div><div class="field internal-field"><label for="planInternalNote">内部メモ</label><textarea class="control compact" id="planInternalNote"></textarea></div><div class="field family-field"><label for="planFamilySummary">家族公開要約</label><textarea class="control compact" id="planFamilySummary"></textarea></div><div class="button-row"><button class="btn primary" type="submit">保存</button><button id="cancelPlan" class="btn danger" type="button">閉じる</button></div></form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>サービス担当者会議</h2><button id="newMeeting" class="btn secondary small" type="button">新規</button></div><div id="meetingList"></div>
+            <form id="meetingForm" class="subform hidden"><input type="hidden" id="meetingId"><input type="hidden" id="meetingExpectedUpdatedAt"><div class="form-grid two"><div class="field"><label for="meetingPlan">対象計画</label><select class="control" id="meetingPlan"><option value="">未選択</option></select></div><div class="field"><label for="meetingStatus">状態</label><select class="control" id="meetingStatus"><option value="planning">調整中</option><option value="inviting">案内中</option><option value="scheduled">開催予定</option><option value="held">開催済み</option><option value="completed">記録完了</option><option value="cancelled">中止</option></select></div><div class="field"><label for="meetingStart">開始</label><input class="control" id="meetingStart" type="datetime-local"></div><div class="field"><label for="meetingEnd">終了</label><input class="control" id="meetingEnd" type="datetime-local"></div><div class="field"><label for="meetingFormat">方法</label><select class="control" id="meetingFormat"><option value="in_person">対面</option><option value="online">オンライン</option><option value="phone">電話</option><option value="written">書面</option></select></div><div class="field"><label for="meetingLocation">場所</label><input class="control" id="meetingLocation"></div></div><div class="field"><label for="meetingParticipants">参加者（1行1名）</label><textarea class="control compact" id="meetingParticipants"></textarea></div><div class="field"><label for="meetingAgenda">議題</label><textarea class="control compact" id="meetingAgenda"></textarea></div><div class="field internal-field"><label for="meetingInternalSummary">内部記録</label><textarea class="control compact" id="meetingInternalSummary"></textarea></div><div class="field family-field"><label for="meetingFamilySummary">家族公開要約</label><textarea class="control compact" id="meetingFamilySummary"></textarea></div><label class="agree"><input id="meetingConsent" type="checkbox"><span>本人・家族の情報共有同意を確認済み</span></label><div class="button-row"><button class="btn primary" type="submit">保存</button><button id="cancelMeeting" class="btn danger" type="button">閉じる</button></div></form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>提出書類依頼</h2></div><div id="documentRequestList"></div>
+            <form id="documentRequestForm" class="subform"><div class="form-grid two"><div class="field"><label for="documentCategory">区分</label><select class="control" id="documentCategory"><option value="certification">認定</option><option value="insurance">保険</option><option value="care_plan">ケアプラン</option><option value="consent">同意書</option><option value="medical">医療</option><option value="provider">事業所</option><option value="identity">本人確認</option><option value="other">その他</option></select></div><div class="field"><label for="documentFamily">依頼先家族</label><select class="control" id="documentFamily"><option value="">本人・家族共通</option></select></div><div class="field"><label for="documentTitle">書類名</label><input class="control" id="documentTitle" required></div><div class="field"><label for="documentDueDate">提出期限</label><input class="control" id="documentDueDate" type="date"></div></div><div class="field"><label for="documentDescription">依頼内容</label><textarea class="control compact" id="documentDescription"></textarea></div><label class="agree"><input id="documentFamilyVisible" type="checkbox" checked><span>本人・家族ポータルへ表示する</span></label><button class="btn primary" type="submit">書類依頼を送る</button></form>
+          </section>
+
+          <section class="card owner-panel">
+            <div class="section-head"><h2>モニタリング履歴</h2></div><div id="clientMonitoringList"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="viewLinks" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">LINE LINK APPROVAL</p><h1>本人・家族LINE連携承認</h1></div></div>
+        <div id="linkRequestList" class="stack-list"></div>
+      </section>
+
+      <section id="viewMonitoring" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">MONITORING REVIEW</p><h1>提出記録の確認</h1></div></div>
+        <div id="monitoringReviewList" class="stack-list"></div>
+      </section>
+
+      <section id="viewSystem" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">SYSTEM STATUS</p><h1>API・データベース確認</h1></div><button id="runSystemCheck" class="btn secondary" type="button">再検査</button></div>
+        <section class="card owner-panel"><div id="healthGrid" class="health-grid"></div><p class="hint">デモ基本データの準備は、営業前system-checkで明示確認後に実行します。</p></section>
+      </section>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><span id="version"></span></footer>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="owner.js"></script>
+</body>
+</html>
