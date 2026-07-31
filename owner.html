@@ -41,7 +41,8 @@
         <button data-view="clients" type="button"><span>03</span>利用者台帳</button>
         <button data-view="links" type="button"><span>04</span>LINE連携承認</button>
         <button data-view="monitoring" type="button"><span>05</span>記録確認</button>
-        <button data-view="system" type="button"><span>06</span>システム確認</button>
+        <button data-view="documents" type="button"><span>06</span>書類確認</button>
+        <button data-view="system" type="button"><span>07</span>システム確認</button>
       </nav>
       <div class="sidebar-actions"><button id="refreshAll" class="btn secondary" type="button">全体を再読込</button><button id="logout" class="btn danger" type="button">ログアウト</button></div>
     </aside>
@@ -129,6 +130,13 @@
       <section id="viewMonitoring" class="owner-view hidden">
         <div class="view-heading"><div><p class="eyebrow">MONITORING REVIEW</p><h1>提出記録の確認</h1></div></div>
         <div id="monitoringReviewList" class="stack-list"></div>
+      </section>
+
+
+      <section id="viewDocuments" class="owner-view hidden">
+        <div class="view-heading"><div><p class="eyebrow">PRIVATE DOCUMENT REVIEW</p><h1>提出書類の受領・確認</h1><p class="muted">非公開Storageの提出書類を確認し、受領または差戻しを行います。</p></div><button id="reloadDocuments" class="btn secondary" type="button">再読込</button></div>
+        <section class="card filter-card"><form id="documentSearchForm" class="filter-row"><select id="documentStatusFilter" class="control"><option value="">すべて</option><option value="uploaded">未確認</option><option value="accepted">受領済み</option><option value="returned">差戻し</option></select><button class="btn primary" type="submit">絞り込む</button></form></section>
+        <div id="ownerDocumentList" class="stack-list"></div>
       </section>
 
       <section id="viewSystem" class="owner-view hidden">
