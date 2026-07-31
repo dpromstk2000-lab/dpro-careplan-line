@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const D=window.DPRO,c=D.config,statusEl=document.getElementById("status"),loginPanel=document.getElementById("loginPanel"),appPanel=document.getElementById("appPanel");
-let token=sessionStorage.getItem(D.ownerTokenKey)||"",dashboard=null,intakes=[],clients=[],documents=[],current=null;
+let token=sessionStorage.getItem(D.ownerTokenKey)||"",dashboard=null,intakes=[],clients=[],documents=[],notifications=[],notificationData=null,current=null;
 const $=id=>document.getElementById(id),safe=v=>D.esc(v??""),authHeaders=()=>({Authorization:`Bearer ${token}`});
 const careLabels={independent:"自立",support_1:"要支援1",support_2:"要支援2",care_1:"要介護1",care_2:"要介護2",care_3:"要介護3",care_4:"要介護4",care_5:"要介護5",pending:"申請中",unknown:"未設定"};
 const clientStatusLabels={prospective:"相談中",active:"利用中",hospitalized:"入院中",suspended:"休止中",ended:"終了",deceased:"死亡"};
@@ -38,6 +38,10 @@ function bindEvents(){
   $("documentRequestForm").addEventListener("submit",saveDocumentRequest);
   $("documentSearchForm").addEventListener("submit",e=>{e.preventDefault();loadDocuments()});
   $("reloadDocuments").addEventListener("click",loadDocuments);
+  $("notificationFilterForm").addEventListener("submit",e=>{e.preventDefault();loadNotifications()});
+  $("clearNotificationFilter").addEventListener("click",()=>{$("notificationStatus").value="";$("notificationEventType").value="";loadNotifications()});
+  $("reloadNotifications").addEventListener("click",loadNotifications);
+  $("runNotifications").addEventListener("click",runNotificationsNow);
   $("runSystemCheck").addEventListener("click",runSystemCheck);
   document.addEventListener("click",handleDelegatedClick);
 }
@@ -51,9 +55,9 @@ async function login(e){e.preventDefault();const b=$("loginButton");b.disabled=t
 async function restore(){try{const data=await D.api("/auth/me",{headers:authHeaders()});if(!["manager","chief_care_manager"].includes(data.staff?.role_type))throw new Error("管理者権限が必要です。");showApp(data);await refreshAll()}catch(err){sessionStorage.removeItem(D.ownerTokenKey);token="";D.show(statusEl,"error",err.message||"ログインし直してください。")}}
 function showApp(data){const s=data.staff||{},o=data.organization||{};$("ownerName").textContent=s.full_name||s.fullName||"";$("ownerMeta").textContent=`${label(roleLabels,s.role_type||s.roleType)}／${s.staff_code||s.staffCode||""}`;$("organizationName").textContent=o.organization_name||o.organizationName||"";loginPanel.classList.add("hidden");appPanel.classList.remove("hidden");$("todayLabel").textContent=new Intl.DateTimeFormat("ja-JP",{timeZone:"Asia/Tokyo",dateStyle:"full"}).format(new Date())}
 async function logout(){try{await D.api("/auth/logout",{method:"POST",headers:authHeaders()})}catch{}sessionStorage.removeItem(D.ownerTokenKey);token="";location.reload()}
-async function refreshAll(){try{await Promise.all([loadDashboard(),loadIntakes(),loadClients(),loadLinkRequests(),loadDocuments()]);if(current?.client?.id)await openClient(current.client.id,false);D.hide(statusEl)}catch(err){D.show(statusEl,"error",err.message)}}
+async function refreshAll(){try{await Promise.all([loadDashboard(),loadIntakes(),loadClients(),loadLinkRequests(),loadDocuments(),loadNotifications()]);if(current?.client?.id)await openClient(current.client.id,false);D.hide(statusEl)}catch(err){D.show(statusEl,"error",err.message)}}
 
-function switchView(name){document.querySelectorAll(".owner-view").forEach(v=>v.classList.add("hidden"));document.querySelectorAll(".owner-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===name));const map={dashboard:"viewDashboard",intakes:"viewIntakes",clients:"viewClients",links:"viewLinks",monitoring:"viewMonitoring",documents:"viewDocuments",system:"viewSystem"};$(map[name]||"viewDashboard").classList.remove("hidden");if(name==="monitoring")renderMonitoringReviews();if(name==="documents")renderDocuments();if(name==="system")runSystemCheck()}
+function switchView(name){document.querySelectorAll(".owner-view").forEach(v=>v.classList.add("hidden"));document.querySelectorAll(".owner-nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===name));const map={dashboard:"viewDashboard",intakes:"viewIntakes",clients:"viewClients",links:"viewLinks",monitoring:"viewMonitoring",documents:"viewDocuments",notifications:"viewNotifications",system:"viewSystem"};$(map[name]||"viewDashboard").classList.remove("hidden");if(name==="monitoring")renderMonitoringReviews();if(name==="documents")renderDocuments();if(name==="notifications")renderNotifications();if(name==="system")runSystemCheck()}
 
 async function loadDashboard(){dashboard=await D.api("/owner/dashboard",{headers:authHeaders()});renderDashboard()}
 function renderDashboard(){const s=dashboard.summary||{};const cards=[[s.activeClients||0,"利用中"],[s.prospectiveClients||0,"相談中"],[s.newIntakes||0,"未完了相談","attention"],[s.pendingLinks||0,"LINE承認待ち","attention"],[s.certificationDue||0,"認定期限90日内","critical"],[s.planDue||0,"計画見直し30日内","attention"],[s.monitoringReview||0,"記録確認待ち","attention"],[s.documentDue||0,"書類期限14日内","attention"],[s.todayAppointments||0,"本日の予定"],[s.openAlerts||0,"未解決警告","critical"]];$("summaryGrid").innerHTML=cards.map(([n,t,c])=>`<div class="owner-summary-card ${c||""}"><b>${safe(n)}</b><span>${safe(t)}</span></div>`).join("");
@@ -112,9 +116,49 @@ function renderLinkRequests(){const items=dashboard?.pendingLinks||[];$("linkReq
 
 function renderMonitoringReviews(){const items=dashboard?.monitoringReviews||[];$("monitoringReviewList").innerHTML=items.length?items.map(x=>`<article class="review-card"><div class="management-head"><div><h3>${safe(x.clientName)}／${safe(D.fmtDate(x.monitoringMonth))}</h3><div class="management-meta">${safe(x.staffName)}／提出 ${safe(x.submittedAt?D.fmt(x.submittedAt):"")}</div></div><span class="badge">確認待ち</span></div><div class="review-content"><div><b>生活・心身状態</b>${safe(x.conditionSummary||"")}</div><div><b>サービス評価</b>${safe(x.serviceEvaluation||"")}</div><div><b>課題</b>${safe(x.issues||"")}</div><div><b>次の対応</b>${safe(x.nextActions||"")}</div><div><b>家族公開要約</b>${safe(x.familyPublicSummary||"")}</div></div><div class="review-actions"><textarea class="control" data-review-reason="${safe(x.id)}" placeholder="差戻し理由（差戻し時は必須）"></textarea><button class="mini-btn primary" type="button" data-monitoring-review="${safe(x.id)}" data-version="${safe(x.version)}" data-decision="approved">承認</button><button class="mini-btn danger" type="button" data-monitoring-review="${safe(x.id)}" data-version="${safe(x.version)}" data-decision="returned">差戻し</button></div></article>`).join(""):'<div class="empty">確認待ちのモニタリングはありません。</div>'}
 
-async function runSystemCheck(){if(!token)return;try{const d=await D.api("/admin/system-check",{headers:authHeaders()}),db=d.database||{};$("healthGrid").innerHTML=[[d.version,"Worker"],[d.documentVersion||"","書類RPC"],[db.version||"","データベース"],[db.tables?.required_count??30,"必須テーブル"],[(db.tables?.missing||[]).length,"不足テーブル"],[(db.rls?.disabled||[]).length,"RLS無効"],[db.demo?.clients??0,"デモ利用者"],[db.demo?.prepared?"準備済み":"未準備","デモ基本データ"],[d.ok?"正常":"要確認","総合判定"]].map(([v,t])=>`<div class="health-item"><b>${safe(t)}</b><span>${safe(v)}</span></div>`).join("");D.hide(statusEl)}catch(err){D.show(statusEl,"error",err.message)}}
+
+const notificationStatusLabels={pending:"送信待ち",held:"保留",sending:"送信中",sent:"送信済み",failed:"失敗",cancelled:"取消",suppressed:"抑止"};
+const notificationEventLabels={certification_due:"認定期限",plan_due:"計画見直し",monitoring_due:"モニタリング",document_due:"書類期限",document_returned:"書類差戻し",appointment_reminder:"訪問予定",meeting_reminder:"担当者会議",family_message:"連絡",line_link_pending:"LINE連携承認",staff_alert:"業務アラート",system:"システム"};
+const notificationHoldLabels={LINE_NOT_LINKED:"LINE未連携",DELIVERY_MODE_HOLD:"デモ・配信停止",LINE_TOKEN_MISSING:"LINEトークン未設定"};
+
+async function loadNotifications(){
+  if(!token)return;
+  const params=new URLSearchParams();
+  const st=$("notificationStatus")?.value||"",ev=$("notificationEventType")?.value||"";
+  if(st)params.set("status",st);if(ev)params.set("eventType",ev);
+  notificationData=await D.api(`/owner/notifications${params.toString()?`?${params}`:""}`,{headers:authHeaders()});
+  notifications=notificationData.jobs||[];
+  renderNotifications();
+}
+function renderNotifications(){
+  if(!$("notificationList")||!notificationData)return;
+  const s=notificationData.summary||{},mode=notificationData.deliveryMode||"hold",configured=Boolean(notificationData.lineDeliveryConfigured);
+  $("notificationMode").textContent=mode==="send"&&configured?"LINE配信：有効":mode==="send"?"LINE配信：トークン未設定のため保留":"デモ安全モード：送信せず保留";
+  $("notificationCron").textContent=`Cloudflare Cron：${notificationData.recommendedCronUtc||"0 23 * * *"}（${notificationData.recommendedCronJst||"毎日08:00"}）`;
+  const cards=[[s.pending||0,"送信待ち"],[s.held||0,"保留","attention"],[s.sent||0,"送信済み"],[s.failed||0,"失敗","critical"],[s.lineNotLinked||0,"LINE未連携","attention"],[s.deliveryHold||0,"安全保留","attention"]];
+  $("notificationSummary").innerHTML=cards.map(([n,t,c])=>`<div class="owner-summary-card ${c||""}"><b>${safe(n)}</b><span>${safe(t)}</span></div>`).join("");
+  const run=notificationData.latestRun;
+  $("notificationLatestRun").innerHTML=run?infoRows([["実行区分",run.triggerType],["状態",run.status],["開始",run.startedAt?D.fmt(run.startedAt):"-"],["完了",run.completedAt?D.fmt(run.completedAt):"-"],["作成",run.prepared],["送信待ち",run.pending],["保留",run.held],["送信済み",run.sent],["失敗",run.failed],["エラー",run.errorMessage||"なし"]]):'<div class="empty-small">通知の定期確認履歴はまだありません。</div>';
+  $("notificationList").innerHTML=notifications.length?notifications.map(x=>`<article class="management-item notification-card status-${safe(x.status)}"><div class="management-head"><div><div class="management-title">${safe(notificationEventLabels[x.eventType]||x.eventType)}／${safe(x.title)}</div><div class="management-meta">${safe(x.clientName||"事業所共通")} → ${safe(x.recipientName||x.recipientType)}／${safe(notificationStatusLabels[x.status]||x.status)}／${safe(x.lineLinked?"LINE連携済み":"LINE未連携")}</div></div><small>${safe(D.fmt(x.createdAt))}</small></div><div class="item-note">${safe(x.body)}</div>${x.holdReason?`<div class="notification-reason">保留理由：${safe(notificationHoldLabels[x.holdReason]||x.holdReason)}</div>`:""}${x.lastErrorMessage?`<div class="notification-error">失敗理由：${safe(x.lastErrorMessage)}</div>`:""}<div class="management-meta">試行 ${safe(x.attemptCount)}/${safe(x.maxAttempts)}${x.nextAttemptAt?`／次回 ${safe(D.fmt(x.nextAttemptAt))}`:""}${x.sentAt?`／送信 ${safe(D.fmt(x.sentAt))}`:""}</div>${["failed","held"].includes(x.status)&&x.lineLinked?`<div class="management-actions"><button class="mini-btn primary" type="button" data-notification-retry="${safe(x.id)}">再送待ちに戻す</button></div>`:""}</article>`).join(""):'<div class="empty">該当する通知はありません。</div>';
+}
+async function runNotificationsNow(){
+  const b=$("runNotifications");if(!confirm("期限・予定・書類・連絡を再確認して通知キューを更新しますか。"))return;
+  b.disabled=true;
+  try{const d=await D.api("/owner/notifications/run",{method:"POST",headers:authHeaders()});await Promise.all([loadNotifications(),loadDashboard()]);D.show(statusEl,"success",d.reason||`通知確認が完了しました。作成 ${d.prepare?.summary?.prepared??0}件`)}
+  catch(err){D.show(statusEl,"error",err.message)}
+  finally{b.disabled=false}
+}
+async function retryNotification(btn){
+  btn.disabled=true;
+  try{const d=await D.api(`/owner/notifications/${btn.dataset.notificationRetry}/retry`,{method:"POST",headers:authHeaders()});await loadNotifications();D.show(statusEl,"success",d.message||"通知を再送待ちに戻しました。")}
+  catch(err){D.show(statusEl,"error",err.message)}
+  finally{btn.disabled=false}
+}
+
+async function runSystemCheck(){if(!token)return;try{const d=await D.api("/admin/system-check",{headers:authHeaders()}),db=d.database||{};$("healthGrid").innerHTML=[[d.version,"Worker"],[d.documentVersion||"","書類RPC"],[d.notificationVersion||"","通知RPC"],[db.version||"","データベース"],[db.tables?.required_count??30,"必須テーブル"],[(db.tables?.missing||[]).length,"不足テーブル"],[(db.rls?.disabled||[]).length,"RLS無効"],[db.demo?.clients??0,"デモ利用者"],[db.demo?.prepared?"準備済み":"未準備","デモ基本データ"],[d.ok?"正常":"要確認","総合判定"]].map(([v,t])=>`<div class="health-item"><b>${safe(t)}</b><span>${safe(v)}</span></div>`).join("");D.hide(statusEl)}catch(err){D.show(statusEl,"error",err.message)}}
 
 async function handleDelegatedClick(e){const cbtn=e.target.closest("[data-client]");if(cbtn){await openClient(cbtn.dataset.client);return}const isave=e.target.closest("[data-intake-save]");if(isave){const id=isave.dataset.intakeSave;try{await D.api(`/owner/intakes/${id}`,{method:"POST",headers:authHeaders(),body:JSON.stringify({status:document.querySelector(`[data-intake-status="${id}"]`).value,expectedStatus:isave.dataset.currentStatus,assignedStaffId:document.querySelector(`[data-intake-staff="${id}"]`).value,closeReason:document.querySelector(`[data-intake-close="${id}"]`).value})});await Promise.all([loadIntakes(),loadDashboard()]);D.show(statusEl,"success","相談受付を更新しました。")}catch(err){D.show(statusEl,"error",err.message)}return}
+  const nretry=e.target.closest("[data-notification-retry]");if(nretry){await retryNotification(nretry);return}
   const dload=e.target.closest("[data-document-download]");if(dload){await downloadDocument(dload);return}const dreview=e.target.closest("[data-document-review]");if(dreview){await reviewDocument(dreview);return}
   const cert=e.target.closest("[data-edit-cert]");if(cert){openCertification(cert.dataset.editCert);return}const plan=e.target.closest("[data-edit-plan]");if(plan){openPlan(plan.dataset.editPlan);return}const meet=e.target.closest("[data-edit-meeting]");if(meet){openMeeting(meet.dataset.editMeeting);return}
   const link=e.target.closest("[data-link-decision]");if(link){const id=link.dataset.linkDecision,note=document.querySelector(`[data-link-note="${id}"]`)?.value||"";try{await D.api(`/owner/link-requests/${id}/decision`,{method:"POST",headers:authHeaders(),body:JSON.stringify({decision:link.dataset.decision,decisionNote:note})});await Promise.all([loadLinkRequests(),loadDashboard()]);D.show(statusEl,"success","LINE連携申請を処理しました。")}catch(err){D.show(statusEl,"error",err.message)}return}

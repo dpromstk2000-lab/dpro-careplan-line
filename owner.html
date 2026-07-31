@@ -42,7 +42,8 @@
         <button data-view="links" type="button"><span>04</span>LINE連携承認</button>
         <button data-view="monitoring" type="button"><span>05</span>記録確認</button>
         <button data-view="documents" type="button"><span>06</span>書類確認</button>
-        <button data-view="system" type="button"><span>07</span>システム確認</button>
+        <button data-view="notifications" type="button"><span>07</span>通知管理</button>
+        <button data-view="system" type="button"><span>08</span>システム確認</button>
       </nav>
       <div class="sidebar-actions"><button id="refreshAll" class="btn secondary" type="button">全体を再読込</button><button id="logout" class="btn danger" type="button">ログアウト</button></div>
     </aside>
@@ -137,6 +138,54 @@
         <div class="view-heading"><div><p class="eyebrow">PRIVATE DOCUMENT REVIEW</p><h1>提出書類の受領・確認</h1><p class="muted">非公開Storageの提出書類を確認し、受領または差戻しを行います。</p></div><button id="reloadDocuments" class="btn secondary" type="button">再読込</button></div>
         <section class="card filter-card"><form id="documentSearchForm" class="filter-row"><select id="documentStatusFilter" class="control"><option value="">すべて</option><option value="uploaded">未確認</option><option value="accepted">受領済み</option><option value="returned">差戻し</option></select><button class="btn primary" type="submit">絞り込む</button></form></section>
         <div id="ownerDocumentList" class="stack-list"></div>
+      </section>
+
+
+      <section id="viewNotifications" class="owner-view hidden">
+        <div class="view-heading">
+          <div><p class="eyebrow">NOTIFICATION QUEUE</p><h1>期限アラート・LINE通知管理</h1></div>
+          <div class="button-row notification-actions">
+            <button id="runNotifications" class="btn primary" type="button">通知を今すぐ確認</button>
+            <button id="reloadNotifications" class="btn secondary" type="button">再読込</button>
+          </div>
+        </div>
+        <section class="card notification-guide">
+          <div><b>定期実行</b><span id="notificationCron">Cloudflare Cron：0 23 * * *（毎日08:00 JST）</span></div>
+          <div><b>配信状態</b><span id="notificationMode">確認中</span></div>
+          <div><b>安全保留</b><span>LINE未連携・デモ配信停止・トークン未設定は送信せず、履歴へ保留します。</span></div>
+        </section>
+        <div id="notificationSummary" class="owner-summary-grid notification-summary"></div>
+        <section class="card filter-card">
+          <form id="notificationFilterForm" class="filter-row">
+            <select id="notificationStatus" class="control">
+              <option value="">すべての状態</option>
+              <option value="pending">送信待ち</option>
+              <option value="held">保留</option>
+              <option value="sending">送信中</option>
+              <option value="sent">送信済み</option>
+              <option value="failed">失敗</option>
+            </select>
+            <select id="notificationEventType" class="control">
+              <option value="">すべての通知</option>
+              <option value="certification_due">認定期限</option>
+              <option value="plan_due">計画見直し</option>
+              <option value="monitoring_due">モニタリング</option>
+              <option value="document_due">書類期限</option>
+              <option value="document_returned">書類差戻し</option>
+              <option value="appointment_reminder">訪問予定</option>
+              <option value="meeting_reminder">担当者会議</option>
+              <option value="family_message">連絡</option>
+              <option value="line_link_pending">LINE連携承認</option>
+            </select>
+            <button class="btn primary" type="submit">絞り込む</button>
+            <button id="clearNotificationFilter" class="btn secondary" type="button">解除</button>
+          </form>
+        </section>
+        <section class="card latest-run-card">
+          <div class="section-head"><h2>直近の定期確認</h2></div>
+          <div id="notificationLatestRun"></div>
+        </section>
+        <div id="notificationList" class="stack-list notification-list"></div>
       </section>
 
       <section id="viewSystem" class="owner-view hidden">
