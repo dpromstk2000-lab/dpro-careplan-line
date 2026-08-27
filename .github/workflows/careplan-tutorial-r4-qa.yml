@@ -107,6 +107,12 @@ jobs:
             const metrics=await page.evaluate(()=>({innerWidth,scrollWidth:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)}));
             const overflowOk=metrics.scrollWidth<=metrics.innerWidth+1;
 
+            // index.html performs an existing GET /public-config to the production Worker.
+            // Stub only that read-only request during localhost QA so CORS from 127.0.0.1
+            // does not create a false Guide Center failure.
+            await page.route('https://dpro-careplan-line-api.dpromstk2000.workers.dev/public-config',async route=>{
+              await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({organization:{organizationName:'DPRO 居宅介護支援事業所（DEMO）'}})});
+            });
             await page.goto(`${base}/index.html`,{waitUntil:'networkidle'});
             const guideEntry=page.locator('#dproGuideEntry');
             const guideEntryVisible=await guideEntry.isVisible();
