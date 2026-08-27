@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m http.server 4173 >/tmp/careplan-r3-http.log 2>&1 &
-          cat > /tmp/careplan-r3-qa.mjs <<'JS'
+          cat > careplan-r3-qa.mjs <<'JS'
           import { chromium } from 'playwright';
           import fs from 'node:fs';
 
@@ -154,7 +154,7 @@ jobs:
           console.log(JSON.stringify(report,null,2));
           if(!report.ok)process.exit(1);
           JS
-          node /tmp/careplan-r3-qa.mjs
+          node careplan-r3-qa.mjs
 
       - name: Public Pages HTTP check
         if: success()
