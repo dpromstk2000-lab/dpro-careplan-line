@@ -122,13 +122,13 @@ jobs:
             await f.locator('[data-view="clients"]').click(); await f.locator('.client').click(); await f.locator('[data-dt="next"]').click();
 
             const k0=await card().boundingBox();
-            await f.locator('.dt-drag').focus(); await f.locator('.dt-drag').press('ArrowRight');
-            let k1=await card().boundingBox();
-            let keyboardMove=Math.abs(k1.x-k0.x)>5||Math.abs(k1.y-k0.y)>5;
-            if(!keyboardMove){
-              await f.locator('.dt-drag').press('ArrowLeft');
-              k1=await card().boundingBox();
-              keyboardMove=Math.abs(k1.x-k0.x)>5||Math.abs(k1.y-k0.y)>5;
+            const dragHandle=f.locator('.dt-drag');
+            await dragHandle.focus();
+            let keyboardMove=false;
+            for(const key of ['ArrowRight','ArrowLeft','ArrowDown','ArrowUp']){
+              await dragHandle.press(key);
+              const k1=await card().boundingBox();
+              if(Math.abs(k1.x-k0.x)>5||Math.abs(k1.y-k0.y)>5){keyboardMove=true;break}
             }
             await f.locator('#newMonitoring').click(); await f.locator('[data-dt="next"]').click();
             const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('dpro_careplan_tutorial_first10_v1_1')||'null')?.state==='COMPLETED');
