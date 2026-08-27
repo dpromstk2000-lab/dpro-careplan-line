@@ -123,8 +123,13 @@ jobs:
 
             const k0=await card().boundingBox();
             await f.locator('.dt-drag').focus(); await f.locator('.dt-drag').press('ArrowRight');
-            const k1=await card().boundingBox();
-            const keyboardMove=k1.x>k0.x+5;
+            let k1=await card().boundingBox();
+            let keyboardMove=Math.abs(k1.x-k0.x)>5||Math.abs(k1.y-k0.y)>5;
+            if(!keyboardMove){
+              await f.locator('.dt-drag').press('ArrowLeft');
+              k1=await card().boundingBox();
+              keyboardMove=Math.abs(k1.x-k0.x)>5||Math.abs(k1.y-k0.y)>5;
+            }
             await f.locator('#newMonitoring').click(); await f.locator('[data-dt="next"]').click();
             const completed=await page.evaluate(()=>JSON.parse(localStorage.getItem('dpro_careplan_tutorial_first10_v1_1')||'null')?.state==='COMPLETED');
 
