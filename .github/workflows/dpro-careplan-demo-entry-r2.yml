@@ -1,0 +1,140 @@
+name: DPRO CAREPLAN DEMO ENTRY R2
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/dpro-careplan-demo-entry-r2.yml']
+permissions:
+  contents: write
+concurrency:
+  group: careplan-demo-entry-r2
+  cancel-in-progress: false
+jobs:
+  improve-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test tools
+        run: |
+          pip install playwright==1.51.0
+          python -m playwright install --with-deps chromium
+      - name: Patch demo-only UI and verify actual source with mocked API
+        run: |
+          cat > careplan-demo-entry.js <<'DPRO_EOF_careplan-demo-entry_js'
+          (()=>{'use strict';
+            const c=window.DPRO_CONFIG||{};
+            const role=location.pathname.split('/').pop();
+            const roles={'owner.html':'管理者PC','owner-ipad.html':'管理者iPad','staff.html':'ケアマネ実務','member.html':'本人・家族'};
+            const fill=document.getElementById('demoFill');
+            const enabled=c.systemCode==='CAREPLAN'&&c.environment==='demo'&&c.demo===true&&c.organizationCode==='dpro_careplan_demo'&&c.apiBase==='https://dpro-careplan-line-api.dpromstk2000.workers.dev';
+            if(!enabled){if(fill){fill.hidden=true;fill.style.setProperty('display','none','important');}const member=document.getElementById('demoActions');if(member){member.hidden=true;member.style.setProperty('display','none','important');}return;}
+            if(!Object.hasOwn(roles,role)||document.getElementById('careplanDemoNav'))return;
+            const style=document.createElement('style');style.textContent=`
+            #careplanDemoNav{box-sizing:border-box;max-width:1100px;margin:12px auto;padding:12px 16px;border:1px solid #b9dfd1;border-radius:14px;background:#f2fbf6;color:#103c31;font:inherit;width:calc(100% - 24px)}
+            #careplanDemoNav strong{display:block;font-size:16px;margin-bottom:4px}#careplanDemoNav p{font-size:13px;line-height:1.5;margin:0 0 8px}
+            #careplanDemoNav .demo-roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+            #careplanDemoNav a{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid #9ccabc;border-radius:9px;background:#fff;color:#134e3e;text-decoration:none;font-size:14px;font-weight:800;text-align:center;padding:8px 4px;line-height:1.4}
+            #careplanDemoNav a[aria-current=page]{background:#0b5342;color:#fff;border-color:#0b5342}
+            #careplanQuickBox{margin:14px 0 16px;padding:14px;border:1px solid #a8dbca;border-radius:12px;background:#effaf5;color:#123d31}
+            #careplanQuickBox p{font-size:14px;line-height:1.5;margin:0 0 10px}#careplanQuickLogin{display:block;width:100%;min-height:50px;padding:12px;border:0;border-radius:9px;background:#087552;color:white;font:inherit;font-size:17px;font-weight:850;cursor:pointer}
+            #careplanQuickLogin:disabled{opacity:.65;cursor:wait}#careplanManual summary{cursor:pointer;padding:10px 0;font-size:14px;color:#34544b}#careplanManual form{margin-top:8px}
+            #careplanDemoNav a:focus-visible,#careplanQuickLogin:focus-visible,#careplanManual summary:focus-visible{outline:3px solid #0b7557;outline-offset:3px}
+            @media(max-width:550px){#careplanDemoNav .demo-roles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+            [hidden]{display:none!important}`;document.head.append(style);
+            const nav=document.createElement('nav');nav.id='careplanDemoNav';nav.setAttribute('aria-label','公開DEMOの画面切り替え');
+            const heading=document.createElement('strong');heading.textContent='DPRO CAREPLAN｜公開操作DEMO';nav.append(heading);
+            const note=document.createElement('p');note.textContent='登録不要。画面を選んで体験できます。実在する利用者の情報・書類は入力しないでください。';nav.append(note);
+            const links=document.createElement('div');links.className='demo-roles';for(const [path,label] of Object.entries(roles)){const a=document.createElement('a');a.href=path;a.textContent=label;if(path===role)a.setAttribute('aria-current','page');links.append(a)}nav.append(links);
+            const main=document.querySelector('main');if(main)main.before(nav);else document.body.prepend(nav);
+            if(role==='member.html'){const b=document.getElementById('demoLogin');if(b)b.textContent='本人・家族DEMOを体験する';return;}
+            const form=document.getElementById('loginForm'),submit=document.getElementById('loginButton');if(!form||!fill||!submit)return;
+            const box=document.createElement('div');box.id='careplanQuickBox';const desc=document.createElement('p');desc.textContent='事業所コードや職員コードの入力は不要です。下のボタンでデモ専用アカウントにログインします。';box.append(desc);
+            const quick=document.createElement('button');quick.id='careplanQuickLogin';quick.type='button';quick.textContent=roles[role]+' DEMOを体験する';box.append(quick);form.before(box);
+            const details=document.createElement('details');details.id='careplanManual';const summary=document.createElement('summary');summary.textContent='手動ログイン（必要な場合のみ）';details.append(summary);form.before(details);details.append(form);
+            const fail=(message)=>{const status=document.getElementById('status');if(window.DPRO?.show)window.DPRO.show(status,'error',message);else if(status)status.textContent=message;};
+            quick.addEventListener('click',()=>{if(submit.disabled)return;fill.click();const expected=role==='staff.html'?'DEMO-CARE-01':'DEMO-MANAGER';if(document.getElementById('organizationCode')?.value!=='dpro_careplan_demo'||document.getElementById('staffCode')?.value!==expected||document.getElementById('accessCode')?.value!=='1234'){fail('DEMO設定を確認できません。手動ログインをご確認ください。');return;}form.requestSubmit(submit);});
+            const sync=()=>{quick.disabled=submit.disabled;quick.textContent=submit.disabled?'DEMOに接続中…':roles[role]+' DEMOを体験する';};new MutationObserver(sync).observe(submit,{attributes:true,attributeFilter:['disabled']});sync();
+          })();
+          DPRO_EOF_careplan-demo-entry_js
+          cat > /tmp/careplan-patch.py <<'DPRO_EOF_patch_py'
+          from pathlib import Path
+          import re, json
+          root=Path('.')
+          config=(root/'config.js').read_text()
+          for needle in ['systemCode: "CAREPLAN"','environment: "demo"','demo: true','organizationCode: "dpro_careplan_demo"','apiBase: "https://dpro-careplan-line-api.dpromstk2000.workers.dev"']:
+              assert needle in config, 'DEMO safety config mismatch: '+needle
+          for page,script in [('owner.html','owner.js'),('owner-ipad.html','owner-ipad.js'),('staff.html','staff.js'),('member.html','member.js')]:
+              p=root/page; s=p.read_text(encoding='utf-8'); assert re.search(r'<script\b[^>]*src=["\']'+re.escape(script)+r'["\'][^>]*>',s),page
+              if page=='member.html': assert 'id="demoLogin"' in s
+              else: assert all('id="'+x+'"' in s for x in ['demoFill','loginForm','loginButton','organizationCode','staffCode','accessCode'])
+              tag='<script src="careplan-demo-entry.js?v=20261127-r2"></script>'
+              if tag not in s:
+                  assert s.lower().count('</body>')==1,page
+                  s=re.sub(r'</body>',tag+'\n</body>',s,flags=re.I)
+                  p.write_text(s,encoding='utf-8')
+          # Preserve locked common template: only change CONFIG text values.
+          p=root/'demo-guide.html';s=p.read_text(encoding='utf-8');m=re.search(r'const CONFIG = (\{.*?\});',s,re.S);assert m
+          c=json.loads(m.group(1));c['quickInfo'][1]['text']='各画面の「DEMOを体験する」ボタンでログイン（手入力不要）';c['screens'][0]['note']='「管理者PC DEMOを体験する」を押すだけでログインできます。';c['screens'][1]['note']='「本人・家族DEMOを体験する」を押してください。実在する書類や個人情報はアップロードしないでください。';c['screens'][2]['note']='「ケアマネ実務 DEMOを体験する」を押すだけです。内部申し送りと家族公開情報の区別も確認できます。';c['screens'][3]['note']='「管理者iPad DEMOを体験する」を押すだけでログインできます。';s=s[:m.start(1)]+json.dumps(c,ensure_ascii=False,indent=2)+s[m.end(1):];p.write_text(s,encoding='utf-8')
+          DPRO_EOF_patch_py
+          cat > /tmp/careplan-qa.py <<'DPRO_EOF_qa_py'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          import json, os, re, mimetypes
+          from urllib.parse import urlparse
+          base='https://dpromstk2000-lab.github.io/dpro-careplan-line/'
+          def local(r):
+              name=urlparse(r.request.url).path.removeprefix('/dpro-careplan-line/')
+              path=Path(name)
+              if not name or '..' in path.parts or not path.is_file(): return r.fulfill(status=404,body='not found')
+              return r.fulfill(status=200,content_type=mimetypes.guess_type(name)[0] or 'application/octet-stream',body=path.read_bytes())
+          results=[]
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,**({'executable_path':os.environ['QA_CHROMIUM']} if os.getenv('QA_CHROMIUM') else {}))
+              for file,code,endpoint in [('owner.html','DEMO-MANAGER','/owner/login'),('owner-ipad.html','DEMO-MANAGER','/owner/login'),('staff.html','DEMO-CARE-01','/staff/login'),('member.html',None,'/member/session')]:
+                  for width in [390,1440]:
+                      page=browser.new_page(viewport={'width':width,'height':900}); requests=[]
+                      def route(r):
+                          req=r.request
+                          if req.url.startswith(base): return local(r)
+                          if req.url.startswith('https://dpro-careplan-line-api.dpromstk2000.workers.dev/'):
+                              if req.method=='POST':requests.append((req.url,req.post_data_json))
+                              return r.fulfill(status=401,headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'*'},json={'message':'QA mock: 認証テスト'})
+                          return r.abort()
+                      page.route('**/*',route);page.goto(base+file,wait_until='domcontentloaded');nav=page.locator('#careplanDemoNav');nav.wait_for();assert nav.locator('a').count()==4;assert not requests,(file,requests)
+                      assert nav.evaluate('(e)=>e.scrollWidth<=e.clientWidth+1'),file
+                      b=page.locator('#careplanQuickLogin' if code else '#demoLogin');assert b.is_visible(),file
+                      if code:assert not page.locator('#careplanManual').evaluate('(e)=>e.open')
+                      b.click();page.wait_for_timeout(450)
+                      assert len(requests)==1 and requests[0][0].endswith(endpoint),(file,requests)
+                      payload=requests[0][1]
+                      if code: assert payload=={'organizationCode':'dpro_careplan_demo','staffCode':code,'accessCode':'1234'},(file,payload)
+                      else: assert payload.get('demoMemberCode')=='DEMO-FAMILY-001',payload
+                      if code: assert b.is_enabled(),file
+                      results.append({'page':file,'viewport':width,'mock_auth_request':'PASS','role_navigation':'PASS'});page.close()
+                  page=browser.new_page();page.route('**/*',lambda r: r.fulfill(status=200,content_type='application/javascript',body='window.DPRO_CONFIG={systemCode:"CAREPLAN",environment:"production",demo:false,organizationCode:"production",apiBase:"https://invalid.example"};') if '/config.js' in r.request.url else local(r) if r.request.url.startswith(base) else r.abort());page.goto(base+file,wait_until='domcontentloaded');page.wait_for_timeout(250);assert page.locator('#careplanDemoNav').count()==0;assert page.locator('#careplanQuickLogin').count()==0;assert not page.locator('#demoFill' if code else '#demoActions').is_visible(),file;page.close();results.append({'page':file,'non_demo_guard':'PASS'})
+              browser.close()
+          Path('careplan-demo-qa').mkdir(exist_ok=True);Path('careplan-demo-qa/result.json').write_text(json.dumps({'checks':results,'note':'Mocked authentication only; no live API requests or business data changes'},ensure_ascii=False,indent=2));print(json.dumps(results,ensure_ascii=False))
+          DPRO_EOF_qa_py
+          node --check careplan-demo-entry.js
+          python -m py_compile /tmp/careplan-patch.py /tmp/careplan-qa.py
+          python /tmp/careplan-patch.py
+          python /tmp/careplan-qa.py
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CAREPLAN-DEMO-ENTRY-R2-QA
+          path: careplan-demo-qa/
+          if-no-files-found: warn
+      - name: Commit verified frontend only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- owner.html owner-ipad.html staff.html member.html demo-guide.html careplan-demo-entry.js
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'CAREPLAN: demo-only one-click entry and role navigation'
+          git push origin HEAD:main
