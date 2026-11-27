@@ -1,4 +1,4 @@
-name: DPRO CAREPLAN DEMO ENTRY R2
+name: DPRO CAREPLAN DEMO ENTRY R2.1
 on:
   workflow_dispatch:
   push:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   improve-demo:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
           python-version: '3.12'
       - name: Install browser test tools
         run: |
-          pip install playwright==1.51.0
+          python -m pip install playwright==1.57.0
           python -m playwright install --with-deps chromium
       - name: Patch demo-only UI and verify actual source with mocked API
         run: |
